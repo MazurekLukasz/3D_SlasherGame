@@ -30,8 +30,6 @@ public class Character : MonoBehaviour
     private float MaxHealthPoints = 10;
     private float HealthPoints;
 
-    [SerializeField]  private CapsuleCollider WeaponCollider;
-
     // Start is called before the first frame update
     void Start()
     {
@@ -170,6 +168,9 @@ public class Character : MonoBehaviour
             Anim.SetTrigger("Attack1");
         }
     }
+
+    #region AnimationEvents
+
     public void ComboChain()
     {
         if(ChainAttack)
@@ -178,6 +179,7 @@ public class Character : MonoBehaviour
             SwitchComboAttack();
         }
     }
+
     public void ComboReset()
     {
         IsAttacking = false;
@@ -188,15 +190,7 @@ public class Character : MonoBehaviour
         //Anim.ResetTrigger("Attack0");
     }
 
-
-    public void WeaponColliderOn()
-    {
-        WeaponCollider.enabled = true;
-    }
-    public void WeaponColliderOff()
-    {
-        WeaponCollider.enabled = false;
-    }
+    #endregion 
 
     public void GetDamage()
     {
@@ -207,6 +201,37 @@ public class Character : MonoBehaviour
         else
         {
             Anim.SetTrigger("Death");
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (Alive)
+        {
+            if (other.tag == "EnemyWeapon")
+            {
+                GetDamage(2f);
+                Debug.Log("Hit!!!");
+            }
+        }
+    }
+
+    public void GetDamage(float damage)
+    {
+        HealthPoints -= damage;
+        if (HealthPoints > 0)
+        {
+            gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+            HealthBar.CurrentValue = HealthPoints;
+        }
+
+        if (HealthPoints <= 0)
+        {
+            HealthPoints = 0;
+            HealthBar.CurrentValue = 0;
+            Anim.SetTrigger("Death");
+            Alive = false;
+            Controller.enabled = false;
         }
     }
 }

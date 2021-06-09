@@ -5,11 +5,12 @@ using UnityEngine.AI;
 
 public class FriendAI : CharacterAI
 {
-    private GameObject TargetToBeat;
     [SerializeField] bool Fight;
 
     [SerializeField] private Bar HealthBar;
-    [SerializeField] float EnemyDistance = 10;
+
+    [SerializeField] protected GameObject FriendToFollow;
+
     // Start is called before the first frame update
     new void Start()
     {
@@ -20,21 +21,37 @@ public class FriendAI : CharacterAI
     // Update is called once per frame
     new void Update()
     {
-        if (!LookForFight())
-        {
-            base.Update();
-            //CheckForEnemies();
-
-        }
-        else
-        {
+        if (LookForFight())
+        {// Enemies are close....
             if (!Fight)
             {
                 ChooseEnemy();
             }
             BattleWithTarget();
-            
         }
+        else
+        {
+            // Follow Trget
+            base.Update();
+            //CheckForEnemies();
+        }
+    }
+
+    public bool LookForFight()
+    {
+        GameObject[] Enemies = GameObject.FindGameObjectsWithTag("Enemy");
+
+        foreach (GameObject enemy in Enemies)
+        {
+            if (Vector3.Distance(transform.position, enemy.transform.position) <= EnemyDistance && enemy.GetComponent<CharacterAI>().Alive)
+            {
+                Agent.stoppingDistance = 2f;
+                return true;
+            }
+        }
+        Agent.stoppingDistance = 5f;
+        Target = FriendToFollow;
+        return false;
     }
 
     void ChooseEnemy()
@@ -44,13 +61,13 @@ public class FriendAI : CharacterAI
         
         // find nearest
         float dist = Vector3.Distance(this.transform.position, Enemies[0].transform.position);
-        TargetToBeat = Enemies[0];
+        Target = Enemies[0];
 
         foreach (GameObject enemy in Enemies)
         {
             if (Vector3.Distance(this.transform.position, enemy.transform.position) < dist)
             {
-                TargetToBeat = enemy;
+                Target = enemy;
                 dist = Vector3.Distance(this.transform.position, enemy.transform.position);
             }
         }
@@ -58,35 +75,18 @@ public class FriendAI : CharacterAI
         Fight = true;
     }
 
-    public bool LookForFight()
-    {
-        GameObject[] Enemies = GameObject.FindGameObjectsWithTag("Enemy");
-
-        foreach (GameObject enemy in Enemies)
-        {
-            if (Vector3.Distance(transform.position, enemy.transform.position) <= EnemyDistance && enemy.GetComponent<EnemyAI>().Alive)
-            {
-                Agent.stoppingDistance = 2f;
-                return true;
-            }
-        }
-        Agent.stoppingDistance = 5f;
-        TargetToBeat = null;
-        return false;
-    }
-
     public void BattleWithTarget()
     {
-        if (!TargetToBeat.GetComponent<EnemyAI>().Alive)
+        if (!Target.GetComponent<CharacterAI>().Alive)
         {
             Fight = false;
         }
         else
         {
-            float distance = Vector3.Distance(this.transform.position, TargetToBeat.transform.position);
+            float distance = Vector3.Distance(this.transform.position, Target.transform.position);
             if (distance >= 2f)
             {
-                Agent.SetDestination(TargetToBeat.transform.position);
+                Agent.SetDestination(Target.transform.position);
             }
             else
             {
@@ -94,13 +94,6 @@ public class FriendAI : CharacterAI
             }
         }
         Anim.SetFloat("Movement", Agent.velocity.normalized.magnitude);
-    }
-
-    void MeeleAttack()
-    {
-        Agent.velocity = Vector3.zero;
-        transform.rotation = Quaternion.LookRotation(TargetToBeat.transform.position - transform.position);
-        Anim.SetTrigger("Attack0");
     }
 
     public void OnTriggerEnter(Collider other)

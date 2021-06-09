@@ -10,13 +10,14 @@ public abstract class CharacterAI : MonoBehaviour
     protected Animator Anim;
     protected CharacterController Controller;
 
+    [SerializeField] protected float EnemyDistance = 10;
 
     protected float MaxHealthPoints = 10;
     protected float HealthPoints;
     public bool Alive { get; set;} = true;
 
     [SerializeField] protected CapsuleCollider WeaponCollider;
-
+    public bool BlockMovement { set; get; }
 
     public virtual void Start()
     {
@@ -55,6 +56,7 @@ public abstract class CharacterAI : MonoBehaviour
             }
         }
     }
+
     public void GetDamage(float dmg)
     {
         HealthPoints -= dmg;
@@ -71,8 +73,17 @@ public abstract class CharacterAI : MonoBehaviour
             Alive = false;
             Controller.enabled = false;
             Agent.enabled = false;
+            Target = null;
             Destroy(gameObject, 5);
         }
+    }
+
+    protected void MeeleAttack()
+    {
+       // BlockMovement = true;
+        Agent.velocity = Vector3.zero;
+        transform.rotation = Quaternion.LookRotation(Target.transform.position - transform.position);
+        Anim.SetTrigger("Attack0");
     }
 
     public void WeaponColliderOn()
