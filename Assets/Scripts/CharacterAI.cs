@@ -86,14 +86,14 @@ public abstract class CharacterAI : MonoBehaviour
         Anim.SetTrigger("Attack0");
     }
 
-    public void WeaponColliderOn()
-    {
-        WeaponCollider.enabled = true;
-    }
-    public void WeaponColliderOff()
-    {
-        WeaponCollider.enabled = false;
-    }
+    //public void WeaponColliderOn()
+    //{
+    //    WeaponCollider.enabled = true;
+    //}
+    //public void WeaponColliderOff()
+    //{
+    //    WeaponCollider.enabled = false;
+    //}
 
     void ComboReset()
     { }
