@@ -18,10 +18,10 @@ public class Character : MonoBehaviour
     [SerializeField] private float desiredRotationSpeed;
     [SerializeField] private float MovementSpeed;
     [SerializeField] float allowPlayerRotation = 0;
-    private float verticalVel;
     private Vector3 moveVector;
     [SerializeField] Camera Cam;
 
+    [SerializeField] ParticleSystem dashEffect;
 
     public bool IsAttacking { set; get; }
     public int Combo { get; set; } = 0;
@@ -30,7 +30,11 @@ public class Character : MonoBehaviour
     private float MaxHealthPoints = 10;
     private float HealthPoints;
 
-    // Start is called before the first frame update
+    bool isDashing;
+    float dashingTime = 1f;
+    float dashingSpeed = 10f;
+    float dashCounter;
+
     void Start()
     {
         HealthPoints = MaxHealthPoints;
@@ -38,48 +42,97 @@ public class Character : MonoBehaviour
         Controller = GetComponent<CharacterController>();
         Anim = GetComponent<Animator>();
         Rigidbody = GetComponent<Rigidbody>();
-        HealthBar.Initialize(HealthPoints,MaxHealthPoints);
+        HealthBar.Initialize(HealthPoints, MaxHealthPoints);
+
+        dashEffect.enableEmission = false;
         //WeaponColliderOff();
 
     }
-
+    Vector3 dashingDirection;
     // Update is called once per frame
     void Update()
     {
         if (Alive)
         {
-            HandleAttack();
-           //InputMagnitude();
-            if (!IsAttacking)
+            if (!isDashing)
             {
-                InputMagnitude();
+                if (Input.GetButtonDown("Fire1"))
+                {
+                    HandleAttack();
+                }
+
+                if (Input.GetKeyDown(KeyCode.Space))
+                {
+                    if (!IsAttacking)
+                    {
+                        SetDirection();
+                        isDashing = true;
+                        dashEffect.enableEmission = true;
+                        dashCounter = 0f;
+                        Anim.SetBool("Dash", true);
+                    }
+                }
+
+                if (!IsAttacking)
+                {
+                    InputMagnitude();
+                }
             }
         }
     }
 
-
-    public void Movement()
+    private void FixedUpdate()
     {
+        if (isDashing)
+        {
+            if (dashCounter >= dashingTime)
+            {
+                isDashing = false;
+                dashEffect.enableEmission = false;
+                Anim.SetBool("Dash", false);
+            }
+            else
+            {
+                Controller.Move(transform.forward * dashingSpeed * Time.deltaTime);
+                dashCounter += Time.deltaTime;
+            }
+
+        }
+    }
+
+    void InputMagnitude()
+    {
+
         hor = Input.GetAxis("Horizontal");
         ver = Input.GetAxis("Vertical");
 
-        var forward = Cam.transform.forward;
-        var right = Cam.transform.right;
+        //Anim.SetFloat("InputZ", ver, 0f, Time.deltaTime /** 2f*/);
+        //Anim.SetFloat("InputX", hor, 0f, Time.deltaTime /** 2f*/);
 
-        forward.y = 0f;
-        right.y = 0f;
+        MovementSpeed = new Vector2(hor, ver).sqrMagnitude;
 
-        forward.Normalize();
-        right.Normalize();
-        
-        desireMoveDirection = (forward * ver) + (right * hor);
+        if (MovementSpeed > allowPlayerRotation)
+        {
+            //Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
+            Movement();
+        }
+        //else if (MovementSpeed < allowPlayerRotation)
+        //{
+        //    Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
+        //}
+
+        Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
+    }
+
+    public void Movement()
+    {
+        desireMoveDirection = CalculateDesiredMoveDirection(hor,ver);
 
         if (!blockRotationPlayer)
         { 
-        transform.rotation = Quaternion.Slerp(transform.rotation,Quaternion.LookRotation(desireMoveDirection), desiredRotationSpeed);
+            transform.rotation = Quaternion.Slerp(transform.rotation,Quaternion.LookRotation(desireMoveDirection), desiredRotationSpeed);
         }
 
-        //Controller.Move((new Vector3( (forward * ver) * Speed * Time.deltaTime, verticalVel, hor * Speed * Time.deltaTime)));
         Controller.Move(desireMoveDirection *  Speed * Time.deltaTime);
 
     }
@@ -88,70 +141,42 @@ public class Character : MonoBehaviour
     {
         hor = Input.GetAxis("Horizontal");
         ver = Input.GetAxis("Vertical");
-        float tmp = 0.7f;
-        if (hor >= tmp || ver >= tmp || hor <= -tmp || ver <= -tmp)
+
+        float treshold = 0.7f;
+        
+        if (hor >= Mathf.Abs(treshold) || ver >= Mathf.Abs(treshold))
         {
-            var forward = Cam.transform.forward;
-            var right = Cam.transform.right;
-
-            forward.y = 0f;
-            right.y = 0f;
-
-            forward.Normalize();
-            right.Normalize();
-
-            desireMoveDirection = (forward * ver) + (right * hor);
+            desireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
 
             //transform.LookAt(desireMoveDirection);
             transform.rotation = Quaternion.LookRotation(desireMoveDirection);
         }
     }
 
-    void InputMagnitude()
+    private Vector3 CalculateDesiredMoveDirection(float horizontal, float vertical)
     {
-        if (!Controller.isGrounded)
-        {
-            verticalVel -= 2f;
-        }
-        else
-        {
-            verticalVel -= 0f;
-        }
+        var forward = Cam.transform.forward;
+        var right = Cam.transform.right;
 
-        hor = Input.GetAxis("Horizontal");
-        ver = Input.GetAxis("Vertical");
+        forward.y = 0f;
+        right.y = 0f;
 
-        Anim.SetFloat("InputZ",ver,0f,Time.deltaTime* 2f);
-        Anim.SetFloat("InputX", hor, 0f, Time.deltaTime * 2f);
+        forward.Normalize();
+        right.Normalize();
 
-        MovementSpeed = new Vector2(hor, ver).sqrMagnitude;
-
-        if (MovementSpeed > allowPlayerRotation)
-        {
-            Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
-            Movement();
-        }
-        else if (MovementSpeed < allowPlayerRotation)
-        {
-            Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
-        }
+        return (forward * vertical) + (right * horizontal);
     }
 
     public void HandleAttack()
     {
-
-        if (Input.GetButtonDown("Fire1"))
+        if (IsAttacking)
         {
-            if (IsAttacking)
-            {
-                ChainAttack = true;
-            }
-            else if (!IsAttacking)
-            {
-                IsAttacking = true;
-                SwitchComboAttack();
-
-            }
+            ChainAttack = true;
+        }
+        else if (!IsAttacking)
+        {
+            IsAttacking = true;
+            SwitchComboAttack();
         }
     }
 
@@ -191,18 +216,6 @@ public class Character : MonoBehaviour
     }
 
     #endregion 
-
-    public void GetDamage()
-    {
-        if (HealthPoints > 0)
-        {
-            HealthPoints -= 2;
-        }
-        else
-        {
-            Anim.SetTrigger("Death");
-        }
-    }
 
     private void OnTriggerEnter(Collider other)
     {
