@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
@@ -18,6 +19,8 @@ public abstract class CharacterAI : MonoBehaviour
 
     [SerializeField] protected CapsuleCollider WeaponCollider;
     public bool BlockMovement { set; get; }
+
+    public event Action<float> OnHPChanged = delegate { };
 
     public virtual void Start()
     {
@@ -52,14 +55,21 @@ public abstract class CharacterAI : MonoBehaviour
         {
             if (other.tag == WeaponTag)
             {
-                GetDamage(2f);
+                if (other.GetComponentInParent<Character>() is Character chara)
+                {
+                      GetDamage(chara.AttackStats);
+                }
+                else
+                    GetDamage(new Damage(null, 2));
             }
         }
     }
 
-    public void GetDamage(float dmg)
+    public void GetDamage(Damage damage)
     {
-        HealthPoints -= dmg;
+        HealthPoints -= damage.Value;
+        OnHPChanged((HealthPoints/ MaxHealthPoints));
+        Debug.Log("hp changed");
         if (HealthPoints > 0)
         {
             gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
@@ -68,6 +78,9 @@ public abstract class CharacterAI : MonoBehaviour
 
         if (HealthPoints <= 0)
         {
+            if (damage.Caster != null)
+                damage.Caster.EnemiesCounter++;
+
             HealthPoints = 0;
             Anim.SetTrigger("Death");
             Alive = false;
@@ -99,4 +112,16 @@ public abstract class CharacterAI : MonoBehaviour
     { }
     void ComboChain()
     { }
+}
+
+public class Damage
+{
+    public Damage(Character caster, int value)
+    {
+        Caster = caster;
+        Value = value;
+    }
+
+    public Character Caster { get; set; }
+    public int Value { get; set; }
 }

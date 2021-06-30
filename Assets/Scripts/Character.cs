@@ -1,6 +1,8 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class Character : MonoBehaviour
 {
@@ -18,7 +20,7 @@ public class Character : MonoBehaviour
     [SerializeField] private float desiredRotationSpeed;
     [SerializeField] private float MovementSpeed;
     [SerializeField] float allowPlayerRotation = 0;
-    private Vector3 moveVector;
+
     [SerializeField] Camera Cam;
 
     [SerializeField] ParticleSystem dashEffect;
@@ -32,11 +34,28 @@ public class Character : MonoBehaviour
 
     bool isDashing;
     float dashingTime = 1f;
-    float dashingSpeed = 10f;
+    float dashingSpeed = 7f;
     float dashCounter;
+
+    public Damage AttackStats => new Damage(this, 2);
+    public Text enemyCounter;
+    private int killedEnemies;
+    public int EnemiesCounter 
+    {
+        get 
+        {
+            return killedEnemies;
+        }
+        set
+        {
+            killedEnemies = value;
+            enemyCounter.text = value.ToString();
+        }
+    }
 
     void Start()
     {
+
         HealthPoints = MaxHealthPoints;
         Cam = Camera.main;
         Controller = GetComponent<CharacterController>();
@@ -52,24 +71,19 @@ public class Character : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Alive)
+        if (Alive && !isDashing)
         {
-            if (!isDashing)
-            {
                 if (Input.GetButtonDown("Fire1"))
                 {
                     HandleAttack();
                 }
 
-                if (Input.GetKeyDown(KeyCode.Space))
+                if (Input.GetButtonDown("Jump"))
                 {
-                    if (!IsAttacking)
+                    Anim.SetBool("Dash", true);
+                    if (IsAttacking)
                     {
-                        SetDirection();
-                        isDashing = true;
-                        dashEffect.enableEmission = true;
-                        dashCounter = 0f;
-                        Anim.SetBool("Dash", true);
+                        ComboReset();
                     }
                 }
 
@@ -77,27 +91,48 @@ public class Character : MonoBehaviour
                 {
                     InputMagnitude();
                 }
-            }
         }
+    }
+
+    public void StartDashing()
+    {
+        isDashing = true;
+        dashEffect.enableEmission = true;
+        dashCounter = 0f;
+        SetDirection();
+    }
+
+    public void Dashing()
+    {
+        Controller.Move(transform.forward * dashingSpeed * Time.deltaTime);
+        dashCounter += Time.deltaTime;
+    }
+    public void EndDashing()
+    {
+        isDashing = false;
+        dashEffect.enableEmission = false;
+        Anim.SetBool("Dash", false);
     }
 
     private void FixedUpdate()
     {
-        if (isDashing)
-        {
-            if (dashCounter >= dashingTime)
-            {
-                isDashing = false;
-                dashEffect.enableEmission = false;
-                Anim.SetBool("Dash", false);
-            }
-            else
-            {
-                Controller.Move(transform.forward * dashingSpeed * Time.deltaTime);
-                dashCounter += Time.deltaTime;
-            }
+        Debug.DrawRay(transform.position + new Vector3(0, .5f, 0), CalculateDesiredMoveDirection(hor,ver) * 5,Color.red,Time.deltaTime);
+        //Debug.Log(transform.position + new Vector3(0, 1, 0));
 
-        }
+
+        //float i = Vector3.Dot(gameObject.transform.forward, transform.InverseTransformPoint(friend.transform.position));
+
+        //var friend = FindObjectOfType<FriendAI>();
+        //Vector3 targetDir = friend.transform.position - transform.position;
+        // float angle = Vector3.Angle(targetDir, transform.forward);
+        // Debug.Log("angle: " + angle);
+        // if (angle < 5.0f)
+        // {
+        //     print("close");
+
+        // }
+
+
     }
 
     void InputMagnitude()
@@ -113,13 +148,8 @@ public class Character : MonoBehaviour
 
         if (MovementSpeed > allowPlayerRotation)
         {
-            //Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
             Movement();
         }
-        //else if (MovementSpeed < allowPlayerRotation)
-        //{
-        //    Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
-        //}
 
         Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
     }
@@ -139,17 +169,69 @@ public class Character : MonoBehaviour
 
     public void SetDirection()
     {
+
         hor = Input.GetAxis("Horizontal");
         ver = Input.GetAxis("Vertical");
 
-        float treshold = 0.7f;
+        float treshold = 0.1f;
         
-        if (hor >= Mathf.Abs(treshold) || ver >= Mathf.Abs(treshold))
+        if (Mathf.Abs(hor) >= treshold || Mathf.Abs(ver) >= treshold)
         {
             desireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
 
             //transform.LookAt(desireMoveDirection);
             transform.rotation = Quaternion.LookRotation(desireMoveDirection);
+        }
+    }
+
+    public void FindNearestEnemyToPlayerDirection()
+    {
+        Vector3 playerPosition = gameObject.transform.position;
+        float distance = 5f;
+
+        EnemyAI target = null;
+        float lastAngle = float.MaxValue;
+
+        float treshold = 0.15f;
+
+        if (Mathf.Abs(hor) >= treshold || Mathf.Abs(ver) >= treshold)
+        {
+            hor = Input.GetAxis("Horizontal");
+            ver = Input.GetAxis("Vertical");
+
+            desireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
+        }
+        else
+        {
+            desireMoveDirection = transform.forward;
+        }
+
+        EnemyAI[] allEnemyList = FindObjectsOfType<EnemyAI>();
+        var closeEnemies = allEnemyList.Where(x => Vector3.Distance(playerPosition, x.transform.position) < distance);
+
+        foreach (var enemy in closeEnemies)
+        {
+            Vector3 dir = enemy.transform.position - transform.position;
+            float ang = Vector3.Angle(dir, desireMoveDirection);
+
+            if (ang < 40)
+            {
+                if (target == null || ang < lastAngle)
+                {
+                    lastAngle = ang;
+                    target = enemy;
+                }
+            }
+        }
+
+        if (target == null)
+        {
+            transform.rotation = Quaternion.LookRotation(desireMoveDirection);
+        }
+        else
+        {
+            //transform.rotation = Quaternion.LookRotation(target.transform.position);
+            transform.LookAt(target.transform.position);
         }
     }
 

@@ -9,9 +9,8 @@ public class FriendAI : CharacterAI
 
     [SerializeField] private Bar HealthBar;
 
-    [SerializeField] protected GameObject FriendToFollow;
+    [SerializeField] protected GameObject TeamLeader;
 
-    // Start is called before the first frame update
     new void Start()
     {
         base.Start();
@@ -50,7 +49,7 @@ public class FriendAI : CharacterAI
             }
         }
         Agent.stoppingDistance = 5f;
-        Target = FriendToFollow;
+        Target = TeamLeader;
         return false;
     }
 

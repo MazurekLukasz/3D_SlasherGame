@@ -2,42 +2,35 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class AttackBehaviour : StateMachineBehaviour
+public class DashBehaviour : StateMachineBehaviour
 {
     // OnStateEnter is called when a transition starts and the state machine starts to evaluate this state
     override public void OnStateEnter(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        //animator.GetComponent<Character>().IsAttacking = true;
-        //animator.GetComponent<Rigidbody>().velocity = Vector3.zero;
         Character character = animator.GetComponent<Character>();
-        CharacterAI characterAI = animator.GetComponent<CharacterAI>();
-
         if (character != null)
         {
-            character.FindNearestEnemyToPlayerDirection();
+            character.StartDashing();
         }
-        else if (characterAI != null)
-        {
-            characterAI.BlockMovement = true;
-        }
-   
-        //animator.ResetTrigger(attack);
     }
 
     // OnStateUpdate is called on each Update frame between OnStateEnter and OnStateExit callbacks
-    //override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
-    //{
-    //    
-    //}
+    override public void OnStateUpdate(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
+    {
+        Character character = animator.GetComponent<Character>();
+        if (character != null)
+        {
+            character.Dashing();
+        }
+    }
 
     // OnStateExit is called when a transition ends and the state machine finishes evaluating this state
     override public void OnStateExit(Animator animator, AnimatorStateInfo stateInfo, int layerIndex)
     {
-        CharacterAI characterAI = animator.GetComponent<CharacterAI>();
-
-        if (characterAI != null)
+        Character character = animator.GetComponent<Character>();
+        if (character != null)
         {
-            characterAI.BlockMovement = false;
+            character.EndDashing();
         }
     }
 

@@ -66,6 +66,7 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\AnimationsBehaviours\AttackBehaviour.cs" />
     <Compile Include="Assets\Scripts\AnimationsBehaviours\DamageBehaviour.cs" />
+    <Compile Include="Assets\Scripts\AnimationsBehaviours\DashBehaviour.cs" />
     <Compile Include="Assets\Scripts\CameraControll.cs" />
     <Compile Include="Assets\Scripts\Character.cs" />
     <Compile Include="Assets\Scripts\CharacterAI.cs" />
@@ -73,6 +74,7 @@
     <Compile Include="Assets\Scripts\EnemyAI.cs" />
     <Compile Include="Assets\Scripts\FriendAI.cs" />
     <Compile Include="Assets\Scripts\Interface\Bar.cs" />
+    <Compile Include="Assets\Scripts\ObjectIndicator.cs" />
     <Compile Include="Assets\Scripts\WeaponColliderController.cs" />
     <Reference Include="UnityEngine">
       <HintPath>C:/Program Files/Unity/Hub/Editor/2019.4.24f1/Editor/Data/Managed/UnityEngine/UnityEngine.dll</HintPath>
