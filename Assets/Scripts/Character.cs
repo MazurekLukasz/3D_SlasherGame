@@ -14,13 +14,13 @@ public class Character : MonoBehaviour
     float hor;
     float ver;
     [SerializeField] float Speed = 5;
-    Vector3 desireMoveDirection;
+    Vector3 DesireMoveDirection;
     [SerializeField] bool blockRotationPlayer;
     [SerializeField] private float desiredRotationSpeed;
     [SerializeField] private float MovementSpeed;
     [SerializeField] float allowPlayerRotation = 0;
 
-    [SerializeField] Camera Cam;
+    [SerializeField] Camera MainCamera;
 
     [SerializeField] ParticleSystem dashEffect;
 
@@ -62,7 +62,7 @@ public class Character : MonoBehaviour
     {
 
         HealthPoints = MaxHealthPoints;
-        Cam = Camera.main;
+        MainCamera = Camera.main;
         Controller = GetComponent<CharacterController>();
         Anim = GetComponent<Animator>();
         HealthBar.Initialize(HealthPoints, MaxHealthPoints);
@@ -105,6 +105,8 @@ public class Character : MonoBehaviour
 
         Velocity.y += Physics.gravity.y * Time.deltaTime;
         Controller.Move(Velocity * Time.deltaTime);
+
+        Debug.Log("velocity " + Controller.velocity);
     }
 
     public void StartDashing()
@@ -144,8 +146,6 @@ public class Character : MonoBehaviour
         //     print("close");
 
         // }
-
-
     }
 
     void InputMagnitude()
@@ -154,30 +154,25 @@ public class Character : MonoBehaviour
         hor = Input.GetAxis("Horizontal");
         ver = Input.GetAxis("Vertical");
 
-        //Anim.SetFloat("InputZ", ver, 0f, Time.deltaTime /** 2f*/);
-        //Anim.SetFloat("InputX", hor, 0f, Time.deltaTime /** 2f*/);
-
         MovementSpeed = new Vector2(hor, ver).sqrMagnitude;
 
         if (MovementSpeed > allowPlayerRotation)
         {
-            Movement();
+            // Movement
+
+            DesireMoveDirection = CalculateDesiredMoveDirection(hor, ver).normalized;
+
+            if (!blockRotationPlayer)
+            {
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(DesireMoveDirection), desiredRotationSpeed);
+            }
+
+            Controller.Move(DesireMoveDirection * Speed * Time.deltaTime);
+
+            // movement
         }
 
         Anim.SetFloat("Movement", MovementSpeed, 0f, Time.deltaTime);
-    }
-
-    public void Movement()
-    {
-        desireMoveDirection = CalculateDesiredMoveDirection(hor,ver);
-
-        if (!blockRotationPlayer)
-        { 
-            transform.rotation = Quaternion.Slerp(transform.rotation,Quaternion.LookRotation(desireMoveDirection), desiredRotationSpeed);
-        }
-        //Vector3(x, gravity, z)
-        Controller.Move(desireMoveDirection *  Speed * Time.deltaTime);
-
     }
 
     public void SetDirection()
@@ -190,10 +185,8 @@ public class Character : MonoBehaviour
         
         if (Mathf.Abs(hor) >= treshold || Mathf.Abs(ver) >= treshold)
         {
-            desireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
-
-            //transform.LookAt(desireMoveDirection);
-            transform.rotation = Quaternion.LookRotation(desireMoveDirection);
+            DesireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
+            transform.rotation = Quaternion.LookRotation(DesireMoveDirection);
         }
     }
 
@@ -212,11 +205,11 @@ public class Character : MonoBehaviour
             hor = Input.GetAxis("Horizontal");
             ver = Input.GetAxis("Vertical");
 
-            desireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
+            DesireMoveDirection = CalculateDesiredMoveDirection(hor, ver);
         }
         else
         {
-            desireMoveDirection = transform.forward;
+            DesireMoveDirection = transform.forward;
         }
 
         EnemyAI[] allEnemyList = FindObjectsOfType<EnemyAI>();
@@ -225,7 +218,7 @@ public class Character : MonoBehaviour
         foreach (var enemy in closeEnemies)
         {
             Vector3 dir = enemy.transform.position - transform.position;
-            float ang = Vector3.Angle(dir, desireMoveDirection);
+            float ang = Vector3.Angle(dir, DesireMoveDirection);
 
             if (ang < 40)
             {
@@ -239,19 +232,18 @@ public class Character : MonoBehaviour
 
         if (target == null)
         {
-            transform.rotation = Quaternion.LookRotation(desireMoveDirection);
+            transform.rotation = Quaternion.LookRotation(DesireMoveDirection);
         }
         else
         {
-            //transform.rotation = Quaternion.LookRotation(target.transform.position);
             transform.LookAt(target.transform.position);
         }
     }
 
     private Vector3 CalculateDesiredMoveDirection(float horizontal, float vertical)
     {
-        var forward = Cam.transform.forward;
-        var right = Cam.transform.right;
+        var forward = MainCamera.transform.forward;
+        var right = MainCamera.transform.right;
 
         forward.y = 0f;
         right.y = 0f;
