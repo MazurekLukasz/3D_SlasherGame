@@ -10,7 +10,6 @@ public class Character : MonoBehaviour
 
     private CharacterController Controller;
     private Animator Anim;
-    private Rigidbody Rigidbody;
 
     float hor;
     float ver;
@@ -24,6 +23,12 @@ public class Character : MonoBehaviour
     [SerializeField] Camera Cam;
 
     [SerializeField] ParticleSystem dashEffect;
+
+    public Transform GroundCheck;
+    public float GroundDistance = 0.4f;
+    public LayerMask GroundMask;
+    bool IsGrounded;
+    Vector3 Velocity;
 
     public bool IsAttacking { set; get; }
     public int Combo { get; set; } = 0;
@@ -60,9 +65,7 @@ public class Character : MonoBehaviour
         Cam = Camera.main;
         Controller = GetComponent<CharacterController>();
         Anim = GetComponent<Animator>();
-        Rigidbody = GetComponent<Rigidbody>();
         HealthBar.Initialize(HealthPoints, MaxHealthPoints);
-
         dashEffect.enableEmission = false;
         //WeaponColliderOff();
 
@@ -71,6 +74,13 @@ public class Character : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        IsGrounded = Physics.CheckSphere(GroundCheck.position, GroundDistance, GroundMask);
+
+        if (IsGrounded && Velocity.y < 0)
+        {
+            Velocity.y = -2f;
+        }
+
         if (Alive && !isDashing)
         {
                 if (Input.GetButtonDown("Fire1"))
@@ -92,6 +102,9 @@ public class Character : MonoBehaviour
                     InputMagnitude();
                 }
         }
+
+        Velocity.y += Physics.gravity.y * Time.deltaTime;
+        Controller.Move(Velocity * Time.deltaTime);
     }
 
     public void StartDashing()
@@ -162,7 +175,7 @@ public class Character : MonoBehaviour
         { 
             transform.rotation = Quaternion.Slerp(transform.rotation,Quaternion.LookRotation(desireMoveDirection), desiredRotationSpeed);
         }
-
+        //Vector3(x, gravity, z)
         Controller.Move(desireMoveDirection *  Speed * Time.deltaTime);
 
     }
@@ -316,7 +329,8 @@ public class Character : MonoBehaviour
         HealthPoints -= damage;
         if (HealthPoints > 0)
         {
-            gameObject.GetComponent<Rigidbody>().velocity = Vector3.zero;
+            Controller.Move(Vector3.zero);
+            //Rigidbody.velocity = Vector3.zero;
             HealthBar.CurrentValue = HealthPoints;
         }
 
